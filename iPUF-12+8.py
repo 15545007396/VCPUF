@@ -45,7 +45,6 @@ def ANN(input_bit_up, input_bit_down, FV, RES):
     x = tf.placeholder(tf.float32,[None,max(input_bit_up,input_bit_down)])
     y = tf.placeholder(tf.float32,[None,1])
 
-    #设置权重，先设置为1层，需要再增加
     weights = {
         'delay_up':tf.Variable(tf.random_normal([input_bit_up,1])),#tf.zeros   tf.random_normal
         'delay_down':tf.Variable(tf.random_normal([input_bit_down+1,1]))
