@@ -45,7 +45,6 @@ def record(totaldf, puf, algo, size, run, crp, train, test):
 def ANN(input_bit, FV, RES):
     rram_num = np.int32(2**(input_bit/2))
     total_crp = rram_num*(rram_num-1)/2
-    #占位，同时规定了输入输出的行列数
     x = tf.placeholder(tf.float32,[None,rram_num])
     y = tf.placeholder(tf.float32,[None,1])
 
@@ -56,20 +55,14 @@ def ANN(input_bit, FV, RES):
         #l1 = tf.nn.tanh(hidden_layer_1)
         return hidden_layer_1
 
-    #result是电导差，result是根据电导差得到的输出结果
-    #net_out差很小，是否扩大一定的倍数？使得result更接近0，1？
     result = neural_network(x)
     prediction = tf.sign(2*result-1)
-    #loss函数，是方差
     loss = tf.reduce_mean(tf.reduce_sum(tf.square(y - result), reduction_indices = [1]))
-    #学习率 经常要调
     train_step = tf.train.AdamOptimizer(0.01).minimize(loss)
 
-    #正确率
     correct_pred = tf.equal(prediction, 2 * y - 1)
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
-    #设置初始化
     init = tf.global_variables_initializer()
     step_num = 1500
     batch_num = 1
@@ -79,16 +72,16 @@ def ANN(input_bit, FV, RES):
     train_crp = []
     #训练
     with tf.Session() as sess:
-        for for_train in range(1,gen-2):#gen是在这里用的
+        for for_train in range(1,gen-2):
             train_size = 1/(2**for_train)
             train_crp.append(total_crp*train_size)
             test_size = 1 - train_size
             x_train, x_test, y_train, y_test = ms.train_test_split(FV, RES, train_size = train_size, test_size = test_size)
             batch_size = x_train.shape[0]//batch_num
-            sess.run(init)#初始化
+            sess.run(init)
             acc = sess.run(accuracy, feed_dict = {x:x_test,y:y_test})
             #print("train_size:" + str(train_size) + "initial acc" + str(acc))
-            #print(np.mean(y_test), x_train.shape)#这里把np.mean(response)去掉了 
+            #print(np.mean(y_test), x_train.shape)
             for step in range(step_num + 1):
                 for batch in range(batch_num):
                     batch_x, batch_y = x_train[batch_size*batch:batch_size*(batch + 1), : ], y_train[batch_size*batch:batch_size*(batch + 1), : ]
@@ -113,7 +106,6 @@ def lr(input_bit, x1, y1):
     total_crp = rram_num*(rram_num-1)/2
     min_max_scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(-1,1))
     X = x1
-    #fit_transform(partData)¶Ô²¿·ÖÊý¾ÝÏÈÄâºÏfit£¬ÕÒµ½¸ÃpartµÄÕûÌåÖ¸±ê£¬Èç¾ùÖµ¡¢·½²î¡¢×î´óÖµ×îÐ¡ÖµµÈµÈ£¨¸ù¾Ý¾ßÌå×ª»»µÄÄ¿µÄ£©£¬È»ºó¶Ô¸ÃpartData½øÐÐ×ª»»transform£¬´Ó¶øÊµÏÖÊý¾ÝµÄ±ê×¼»¯¡¢¹éÒ»»¯µÈµÈ¡£¡£
     X = min_max_scaler.fit_transform(X)
     Y = y1
     list_result=[]
@@ -123,16 +115,14 @@ def lr(input_bit, x1, y1):
         train_size = 1/(2**for_train)
         test_size = 1 - train_size
         X_train,X_test, Y_train, Y_test = train_test_split(X, Y, train_size = train_size, test_size=test_size)
-        #ÏÂÃæ¿ªÊ¼µ÷ÓÃsklearnµÄÑµÁ·LRº¯Êý
         clf = LogisticRegression()
         clf.fit(X_train,Y_train)
-        #scoreÐ£Ñé
+        
         score = clf.score(X_test,Y_test)
-        #½øÐÐÔ¤²â
+        
         pre_Y = clf.predict(X_test)
         pre_train_Y = clf.predict(X_train)
         #####################################################################################################
-        #ÏÂÃæµÄ±ä»»Ö÷ÒªÊÇÎªÁËÑµÁ·Ê±£¬»®·ÖÊý¾Ý¼¯ºÍ²âÊÔ¼¯×ö×¼±¸
         Y_test = Y_test.reshape(-1)
         Y_train = Y_train.reshape(-1)
         train_xor = np.bitwise_xor(pre_train_Y.astype(int), Y_train.astype(int))
@@ -158,8 +148,7 @@ def load_data(Cha, Response, test_size):
     x = Cha
     y = Response
     scaler = StandardScaler()
-    x_std = scaler.fit_transform(x)  # ±ê×¼»¯
-    # ½«Êý¾Ý»®·ÖÎªÑµÁ·¼¯ºÍ²âÊÔ¼¯£¬test_size=.3±íÊ¾30%µÄ²âÊÔ¼¯
+    x_std = scaler.fit_transform(x)
     x_train, x_test, y_train, y_test = train_test_split(x_std, y, test_size = test_size)
     #print(x_train)
     #print(y_train)
@@ -167,19 +156,14 @@ def load_data(Cha, Response, test_size):
 
 
 def svm_c(x_train, x_test, y_train, y_test):
-    # rbfºËº¯Êý£¬ÉèÖÃÊý¾ÝÈ¨ÖØ
     svc = SVC(kernel='rbf', class_weight='balanced',)
     c_range = np.logspace(-5, 15, 11, base=2)
     gamma_range = np.logspace(-9, 3, 13, base=2)
-    # Íø¸ñËÑË÷½»²æÑéÖ¤µÄ²ÎÊý·¶Î§£¬cv=3,3ÕÛ½»²æ
     param_grid = [{'kernel': ['rbf'], 'C': c_range, 'gamma': gamma_range}]
     grid = GridSearchCV(svc, param_grid, cv=3, n_jobs=-1)
-    # ÑµÁ·Ä£ÐÍ
     clf = grid.fit(x_train, y_train)
-    # ¼ÆËã²âÊÔ¼¯¾«¶È
     score_train = grid.score(x_train, y_train)
     score = grid.score(x_test, y_test)
-    #print('¾«¶ÈÎª%s' % score)
     return score_train, score
 
 def svm(input_bit, x1, y1):
@@ -324,7 +308,6 @@ rram_num = np.int32(2**(input_bit/2))
 
 f = open("./rram_test.lis","rb")
 
-#ÒÔÏÂÉú³ÉresponseÊý¾Ý
 lines1 =  f.read().decode("utf-8")
 lines = lines1.split("\n")
 regs = []
@@ -396,7 +379,7 @@ for i in range(runtimes):
 for i in range(runtimes):
     m, a, b = adab(input_bit, FV, RES)
     totaldf = record(totaldf, '2cell', 'adab', input_bit, i, m, a, b)
-totaldf.to_csv('2cell-12bit-'+str(datetime.date.today())+'.csv')
+totaldf.to_csv('2cell-12bit.csv')
 
 
 # In[ ]:
